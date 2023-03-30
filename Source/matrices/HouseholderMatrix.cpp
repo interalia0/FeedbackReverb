@@ -12,43 +12,27 @@
 
 HouseholderMixer::HouseholderMixer(int numChannels) : size(numChannels)
 {
-    generateMatrix();
 }
 
-void HouseholderMixer::processInPlace(juce::AudioBuffer<float>& input)
-{
+void HouseholderMixer::process(const juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& output) {
     int numSamples = input.getNumSamples();
     
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        for (int i = 0; i < size; ++i)
+        for (int channel = 0; channel < size; ++channel)
         {
-            float sum = 0.0f;
-            for (int j = 0; j < size; ++j)
+            float sum = input.getSample(channel, sample);
+            for (int i = 1; i < size; ++i)
             {
-                sum += matrix[i][j] * input.getSample(j, sample);
+                sum += input.getSample((channel + i) % size, sample);
             }
-            input.setSample(i, sample, sum);
+            sum *= factor;
+            for (int i = 0; i < size; ++i)
+            {
+                float newVal = input.getSample(channel, sample) + sum;
+                output.setSample(channel, sample, newVal);
+            }
         }
     }
 }
 
-void HouseholderMixer::generateMatrix()
-{
-    matrix.resize(size, std::vector<float>(size, 0.0f));
-    float factor = -2.0f / (size * (size + 1));
-    for (int i = 0; i < size; ++i)
-    {
-        for (int j = 0; j < size; ++j)
-        {
-            if (i == j)
-            {
-                matrix[i][j] = 1.0f;
-            }
-            else
-            {
-                matrix[i][j] = factor * (1.0f / (i + j + 1));
-            }
-        }
-    }
-}

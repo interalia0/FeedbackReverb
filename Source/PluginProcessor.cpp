@@ -143,38 +143,40 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 {
     juce::ScopedNoDenormals noDenormals;
     
+    juce::AudioBuffer<float> upmixedBuffer(8, buffer.getNumSamples());
     
-    for (int channel = 0; channel < revChannels; ++channel)
-    {
-        reverbBuffer.copyFrom(channel, 0, buffer, channel % buffer.getNumChannels(), 0, buffer.getNumSamples());
-    }
-    
-    delay.process(reverbBuffer);
-    
-    for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
-    {
-        buffer.clear(channel, 0, buffer.getNumSamples());
-    }
-
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
-        std::array<float, 8> inputMultiChannel{};
-        std::array<float, 2> outputStereo{};
-
-        // Fill the inputMultiChannel array with samples from the reverbBuffer
-        for (int channel = 0; channel < revChannels; ++channel)
-        {
-            inputMultiChannel[channel] = reverbBuffer.getSample(channel, sample);
-        }
-
-        // Downmix the 8 channels to stereo
-        multiMix.multiToStereo(inputMultiChannel, outputStereo);
-
-        float scaleFactor = multiMix.scalingFactor1();
+        std::array<float, 2> inputStereo = {buffer.getSample(0, sample), buffer.getSample(1, sample)};
+        std::array<float, 8> upmixed;
         
-        for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
+        multiMix.stereoToMulti(inputStereo, upmixed);
+        
+        for (int channel = 0; channel < 8; ++channel)
         {
-            buffer.addSample(channel, sample, outputStereo[channel] * scaleFactor);
+            upmixedBuffer.setSample(channel, sample, upmixed[channel]);
+        }
+    }
+    
+    delay.process(upmixedBuffer);
+    
+    for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+    {
+        std::array<float, 8> processed;
+        std::array<float, 2> downmixed;
+        
+        for (int channel = 0; channel < 8; ++channel)
+        {
+            processed[channel] = upmixedBuffer.getSample(channel, sample);
+        }
+        
+        multiMix.multiToStereo(processed, downmixed);
+        
+        const float scaling = multiMix.scalingFactor2();
+        
+        for (int channel = 0; channel < 2; ++channel)
+        {
+            buffer.setSample(channel, sample, downmixed[channel] * scaling);
         }
     }
 }

@@ -4,19 +4,17 @@
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1">
   <MAINGROUP id="eGoK7M" name="FeedbackReverb">
     <GROUP id="{E687A671-4514-189A-526F-AFE5B0D0D49D}" name="dsp">
-      <FILE id="cTHER0" name="common.h" compile="0" resource="0" file="Source/dsp/common.h"/>
-      <FILE id="XWRUmZ" name="curves.h" compile="0" resource="0" file="Source/dsp/curves.h"/>
-      <FILE id="Iuxk8d" name="delay.h" compile="0" resource="0" file="Source/dsp/delay.h"/>
-      <FILE id="KauuF2" name="envelopes.h" compile="0" resource="0" file="Source/dsp/envelopes.h"/>
-      <FILE id="IuCpn1" name="fft.h" compile="0" resource="0" file="Source/dsp/fft.h"/>
-      <FILE id="I8OJWg" name="filters.h" compile="0" resource="0" file="Source/dsp/filters.h"/>
-      <FILE id="UeFxcc" name="LICENSE.txt" compile="0" resource="1" file="Source/dsp/LICENSE.txt"/>
-      <FILE id="YnGW43" name="mix.h" compile="0" resource="0" file="Source/dsp/mix.h"/>
-      <FILE id="k5KTg5" name="perf.h" compile="0" resource="0" file="Source/dsp/perf.h"/>
-      <FILE id="Y1jx0J" name="rates.h" compile="0" resource="0" file="Source/dsp/rates.h"/>
-      <FILE id="Ai8eKd" name="README.md" compile="0" resource="1" file="Source/dsp/README.md"/>
-      <FILE id="rwkNZK" name="spectral.h" compile="0" resource="0" file="Source/dsp/spectral.h"/>
-      <FILE id="tDSu4s" name="windows.h" compile="0" resource="0" file="Source/dsp/windows.h"/>
+      <FILE id="G0l1Kn" name="common.h" compile="0" resource="0" file="Source/dsp/common.h"/>
+      <FILE id="HvZtQP" name="curves.h" compile="0" resource="0" file="Source/dsp/curves.h"/>
+      <FILE id="gORc9g" name="delay.h" compile="0" resource="0" file="Source/dsp/delay.h"/>
+      <FILE id="Z3nAFR" name="envelopes.h" compile="0" resource="0" file="Source/dsp/envelopes.h"/>
+      <FILE id="KIHuDK" name="fft.h" compile="0" resource="0" file="Source/dsp/fft.h"/>
+      <FILE id="lpdOWV" name="filters.h" compile="0" resource="0" file="Source/dsp/filters.h"/>
+      <FILE id="BnWaJp" name="mix.h" compile="0" resource="0" file="Source/dsp/mix.h"/>
+      <FILE id="DQppDu" name="perf.h" compile="0" resource="0" file="Source/dsp/perf.h"/>
+      <FILE id="owGs3f" name="rates.h" compile="0" resource="0" file="Source/dsp/rates.h"/>
+      <FILE id="YHiVqQ" name="spectral.h" compile="0" resource="0" file="Source/dsp/spectral.h"/>
+      <FILE id="n1APyu" name="windows.h" compile="0" resource="0" file="Source/dsp/windows.h"/>
     </GROUP>
     <GROUP id="{EAE64E9E-573F-CD84-610D-F5E5D2E4379A}" name="Source">
       <GROUP id="{4D4C80CE-8355-7C3A-4F80-8F44D20E7317}" name="reverb">

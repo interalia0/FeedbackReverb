@@ -20,7 +20,7 @@ public:
     
     void prepare(juce::dsp::ProcessSpec& spec, double sampleRate)
     {
-        delays.prepare(spec);
+        delay.prepare(spec);
         std::fill (lastDelayOutput.begin(), lastDelayOutput.end(), 0.0f);
     }
     
@@ -31,8 +31,8 @@ public:
         {
             float ratio = channel * 1.0 / channels;
             delaySamples[channel] = std::pow(2, ratio) * delaySamplesBase;
-            delays.setMaximumDelayInSamples(delaySamples[channel] + 1);
-            delays.reset();
+            delay.setMaximumDelayInSamples(delaySamples[channel] + 1);
+            delay.reset();
         }
     }
         
@@ -40,42 +40,40 @@ public:
     {
         int numSamples = buffer.getNumSamples();
         juce::AudioBuffer<float> delayed(channels, numSamples);
-        
-        
+                
         for (int channel = 0; channel < channels; ++channel)
         {
             for (int sample = 0; sample < numSamples; ++sample)
             {
-                float delayedSample = delays.popSample(channel, delaySamples[channel], true);
-
+                float delayedSample = delay.popSample(channel, delaySamples[channel], true);
                 delayed.setSample(channel, sample, delayedSample);
             }
         }
         
-        householderMixer.processInPlace(delayed);
+        juce::AudioBuffer<float> mixed(channels, numSamples);
+        householderMixer.process(delayed, mixed);
         
         for (int channel = 0; channel < channels; ++channel)
         {
             for (int sample = 0; sample < numSamples; ++sample)
             {
-                auto input = buffer.getSample(channel, sample);
-                auto mixed = delayed.getSample(channel, sample);
-                float sum = input + mixed * feedback;
+                float inputSample = buffer.getSample(channel, sample);
+                float mixedSample = mixed.getSample(channel, sample);
+                float sum = inputSample + mixedSample * decayGain;
                 
-                buffer.setSample(channel, sample, sum);
-                
-                delays.pushSample(channel, sum);
+                buffer.setSample(channel, sample, sum);                
+                delay.pushSample(channel, sum);
             }
         }
     }
         
 private:
-    float delayInMs = 150;
-    float feedback = 0.85;
+    float delayInMs = 80;
+    float decayGain = 0.85;
     std::array<float, 2> lastDelayOutput;
     
     std::array<int, channels> delaySamples;
-    juce::dsp::DelayLine<float> delays;
+    juce::dsp::DelayLine<float> delay;
     HouseholderMixer householderMixer{channels};
 };
 

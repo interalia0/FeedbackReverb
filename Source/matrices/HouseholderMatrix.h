@@ -16,11 +16,12 @@ class HouseholderMixer
 public:
     HouseholderMixer(int numChannels);
 
-    void processInPlace(juce::AudioBuffer<float>& input);
+    void process(const juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& output);
 
 private:
-    void generateMatrix();
+//    void generateMatrix();
     
     int size;
-    std::vector<std::vector<float>> matrix;
+    const float factor = -2.0f / (size * (size + 1));
+//    std::vector<std::vector<float>> matrix;
 };
