@@ -18,16 +18,14 @@
     </GROUP>
     <GROUP id="{EAE64E9E-573F-CD84-610D-F5E5D2E4379A}" name="Source">
       <GROUP id="{4D4C80CE-8355-7C3A-4F80-8F44D20E7317}" name="reverb">
+        <FILE id="EN1jAj" name="Diffuser.h" compile="0" resource="0" file="Source/reverb/Diffuser.h"/>
+        <FILE id="QBENxB" name="DiffusionStep.h" compile="0" resource="0" file="Source/reverb/DiffusionStep.h"/>
         <FILE id="o2Ag7X" name="MultiChannelDelay.h" compile="0" resource="0"
               file="Source/reverb/MultiChannelDelay.h"/>
       </GROUP>
       <GROUP id="{25EC2712-4D87-59D4-86C1-7F88379A2844}" name="matrices">
-        <FILE id="J2RTTD" name="HadamardMatrix.cpp" compile="1" resource="0"
-              file="Source/matrices/HadamardMatrix.cpp"/>
         <FILE id="W9s4LL" name="HadamardMatrix.h" compile="0" resource="0"
               file="Source/matrices/HadamardMatrix.h"/>
-        <FILE id="rCAZjw" name="HouseholderMatrix.cpp" compile="1" resource="0"
-              file="Source/matrices/HouseholderMatrix.cpp"/>
         <FILE id="jTjFtG" name="HouseholderMatrix.h" compile="0" resource="0"
               file="Source/matrices/HouseholderMatrix.h"/>
       </GROUP>

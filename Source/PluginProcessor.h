@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "reverb/MultiChannelDelay.h"
+#include "reverb/Diffuser.h"
 #include "dsp/mix.h"
 
 //==============================================================================
@@ -59,9 +60,12 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
-    juce::AudioBuffer<float> reverbBuffer;
     static const int revChannels = 8;
+
+    juce::AudioBuffer<float> upmixedBuffer;
+    
     MultiChannelDelay<revChannels> delay;
+    Diffuser<revChannels, 8> diffuser {300};
     signalsmith::mix::StereoMultiMixer<float, revChannels> multiMix;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeedbackReverbAudioProcessor)

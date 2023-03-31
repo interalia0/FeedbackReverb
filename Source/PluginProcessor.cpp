@@ -97,10 +97,13 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = samplesPerBlock;
     spec.numChannels = 8;
-    delay.prepare(spec, sampleRate);
+    delay.prepare(spec);
     delay.configure(sampleRate);
+    diffuser.prepare(spec);
+    diffuser.configure(sampleRate);
     
-    reverbBuffer.setSize(revChannels, samplesPerBlock);
+    
+    upmixedBuffer.setSize(revChannels, samplesPerBlock);
 
     
     // Use this method as the place to do any pre-playback
@@ -109,8 +112,8 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
 
 void FeedbackReverbAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
+    delay.reset();
+    diffuser.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -143,8 +146,6 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 {
     juce::ScopedNoDenormals noDenormals;
     
-    juce::AudioBuffer<float> upmixedBuffer(8, buffer.getNumSamples());
-    
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
         std::array<float, 2> inputStereo = {buffer.getSample(0, sample), buffer.getSample(1, sample)};
@@ -158,7 +159,8 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
         }
     }
     
-    delay.process(upmixedBuffer);
+    diffuser.processInPlace(upmixedBuffer);
+    delay.processInPlace(upmixedBuffer);
     
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {

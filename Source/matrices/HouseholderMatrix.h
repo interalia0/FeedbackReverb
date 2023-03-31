@@ -11,17 +11,37 @@
 #pragma once
 #include <JuceHeader.h>
 
-class HouseholderMixer
+template<int size>
+struct HouseholderMixer
 {
-public:
-    HouseholderMixer(int numChannels);
-
-    void process(const juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& output);
-
-private:
-//    void generateMatrix();
+    float factor;
     
-    int size;
-    const float factor = -2.0f / (size * (size + 1));
-//    std::vector<std::vector<float>> matrix;
+    HouseholderMixer()
+    {
+        static_assert(size >= 0, "Size must be positive");
+        factor = -2.0f / (size * (size + 1));
+    }
+
+    void process(const juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& output)
+    {
+        int numSamples = input.getNumSamples();
+        
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            for (int channel = 0; channel < size; ++channel)
+            {
+                float sum = input.getSample(channel, sample);
+                for (int i = 1; i < size; ++i)
+                {
+                    sum += input.getSample((channel + i) % size, sample);
+                }
+                sum *= factor;
+                for (int i = 0; i < size; ++i)
+                {
+                    float newVal = input.getSample(channel, sample) + sum;
+                    output.setSample(channel, sample, newVal);
+                }
+            }
+        }
+    }
 };
