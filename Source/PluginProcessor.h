@@ -17,6 +17,7 @@
 /**
 */
 class FeedbackReverbAudioProcessor  : public juce::AudioProcessor
+                                      
                             #if JucePlugin_Enable_ARA
                              , public juce::AudioProcessorARAExtension
                             #endif
@@ -58,15 +59,25 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+    
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    juce::AudioProcessorValueTreeState treeState {*this, nullptr, "Parameters", createParameterLayout()};
+    
+
 
 private:
     static const int revChannels = 8;
 
     juce::AudioBuffer<float> upmixedBuffer;
+    juce::AudioBuffer<float> outputBuffer;
+
     
     MultiChannelDelay<revChannels> delay;
-    Diffuser<revChannels, 8> diffuser {300};
+    Diffuser<revChannels, 6> diffuser {250};
     signalsmith::mix::StereoMultiMixer<float, revChannels> multiMix;
+    
+//    float dry;
+//    float wet;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeedbackReverbAudioProcessor)
 };

@@ -12,14 +12,18 @@
 #include "../matrices/HouseholderMatrix.h"
 #include <JuceHeader.h>
 
-template <int channels = 8>
+template <int channels>
 class MultiChannelDelay
 {
 public:
     
+    float delayInMs = 150;
+    double specSampleRate;
+    
     void prepare(juce::dsp::ProcessSpec& spec)
     {
         delay.prepare(spec);
+        dampingFilter.prepare(spec);
     }
     
     void configure(double sampleRate)
@@ -29,14 +33,18 @@ public:
         {
             float ratio = channel * 1.0 / channels;
             delaySamples[channel] = std::pow(2, ratio) * delaySamplesBase;
-            delay.setMaximumDelayInSamples(delaySamples[channel] + 1);
-            delay.reset();
+            delay.setMaximumDelayInSamples(sampleRate * 2);
         }
+                
+        dampingFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+        dampingFilter.setCutoffFrequency(4000);
+        
     }
     
     void reset()
     {
         delay.reset();
+        dampingFilter.reset();
     }
         
     void processInPlace(juce::AudioBuffer<float>& buffer)
@@ -64,18 +72,22 @@ public:
                 float mixedSample = mixed.getSample(channel, sample);
                 float sum = inputSample + mixedSample * decayGain;
                 
+                dampingFilter.processSample(channel, sum);
+                
                 buffer.setSample(channel, sample, sum);                
                 delay.pushSample(channel, sum);
             }
         }        
     }
-        
+    
+            
 private:
-    float delayInMs = 80;
     float decayGain = 0.85;
     
     std::array<int, channels> delaySamples;
-    juce::dsp::DelayLine<float> delay;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delay;
     HouseholderMixer<channels> householderMixer;
+    
+    juce::dsp::StateVariableTPTFilter<float> dampingFilter;
 };
 

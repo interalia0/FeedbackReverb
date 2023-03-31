@@ -12,18 +12,19 @@
 #include <JuceHeader.h>
 #include "DiffusionStep.h"
 
-template <int channels = 8, int stepCount = 4>
+template <int channels, int stepCount>
 struct Diffuser
 {
 
     using Step = DiffusionStep<channels>;
     std::array<Step, stepCount> steps;
 
-    Diffuser(double totalDiffusionMs)
+    Diffuser(double diffusionMs)
     {
         for (auto &step : steps)
         {
-            step.delayMsRange = totalDiffusionMs / stepCount;
+            diffusionMs *= 0.5;
+            step.delayMsRange = diffusionMs;
         }
     }
     

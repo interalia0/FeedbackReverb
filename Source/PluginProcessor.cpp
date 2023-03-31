@@ -22,10 +22,12 @@ FeedbackReverbAudioProcessor::FeedbackReverbAudioProcessor()
                        )
 #endif
 {
+
 }
 
 FeedbackReverbAudioProcessor::~FeedbackReverbAudioProcessor()
 {
+
 }
 
 //==============================================================================
@@ -96,7 +98,7 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = samplesPerBlock;
-    spec.numChannels = 8;
+    spec.numChannels = revChannels;
     delay.prepare(spec);
     delay.configure(sampleRate);
     diffuser.prepare(spec);
@@ -104,10 +106,7 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
     
     
     upmixedBuffer.setSize(revChannels, samplesPerBlock);
-
-    
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    outputBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
 }
 
 void FeedbackReverbAudioProcessor::releaseResources()
@@ -149,11 +148,11 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
         std::array<float, 2> inputStereo = {buffer.getSample(0, sample), buffer.getSample(1, sample)};
-        std::array<float, 8> upmixed;
+        std::array<float, revChannels> upmixed;
         
         multiMix.stereoToMulti(inputStereo, upmixed);
         
-        for (int channel = 0; channel < 8; ++channel)
+        for (int channel = 0; channel < revChannels; ++channel)
         {
             upmixedBuffer.setSample(channel, sample, upmixed[channel]);
         }
@@ -161,13 +160,15 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     
     diffuser.processInPlace(upmixedBuffer);
     delay.processInPlace(upmixedBuffer);
+
+    const float mixValue = treeState.getRawParameterValue("mix")->load();
     
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
-        std::array<float, 8> processed;
+        std::array<float, revChannels> processed;
         std::array<float, 2> downmixed;
         
-        for (int channel = 0; channel < 8; ++channel)
+        for (int channel = 0; channel < revChannels; ++channel)
         {
             processed[channel] = upmixedBuffer.getSample(channel, sample);
         }
@@ -175,10 +176,12 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
         multiMix.multiToStereo(processed, downmixed);
         
         const float scaling = multiMix.scalingFactor2();
-        
+                    
         for (int channel = 0; channel < 2; ++channel)
         {
-            buffer.setSample(channel, sample, downmixed[channel] * scaling);
+            const float input = buffer.getSample(channel, sample);
+            const float output = input * (1.0 - mixValue) + (downmixed[channel] * mixValue * scaling);
+            buffer.setSample(channel, sample, output);
         }
     }
 }
@@ -191,7 +194,8 @@ bool FeedbackReverbAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* FeedbackReverbAudioProcessor::createEditor()
 {
-    return new FeedbackReverbAudioProcessorEditor (*this);
+//    return new FeedbackReverbAudioProcessorEditor (*this);
+    return new juce::GenericAudioProcessorEditor (*this);
 }
 
 //==============================================================================
@@ -213,4 +217,16 @@ void FeedbackReverbAudioProcessor::setStateInformation (const void* data, int si
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new FeedbackReverbAudioProcessor();
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout
+FeedbackReverbAudioProcessor::createParameterLayout()
+{
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+    using pID = juce::ParameterID;
+    using Range = juce::NormalisableRange<float>;
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"size", 1}, "Size", Range{ 10, 500, 0.1}, 150));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 15, 0.1}, 3));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"mix", 1}, "Mix", Range{0, 1, 0.01}, 0.5));
+    return layout;
 }

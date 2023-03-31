@@ -11,9 +11,9 @@
 #pragma once
 #include "../matrices/HadamardMatrix.h"
 #include <JuceHeader.h>
+#include <random>
 
-
-template <int channels = 8>
+template <int channels>
 class DiffusionStep
 {
 public:
@@ -79,14 +79,18 @@ public:
     }
 
 private:
-    double randomInRange(float low, float high)
+    double randomInRange(double low, double high)
     {
-        float unitRand = rand()/float(RAND_MAX);
-        return low + unitRand*(high - low);
+        // Use C++11 random number generation library
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> dist(low, high);
+
+        return dist(gen);
     }
     
     std::array<int, channels> delaySamples;
-    juce::dsp::DelayLine<float> delay;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delay;
     std::array<bool, channels> flipPolarity;
     HadamardMixer<float, channels> hadamard;
 };
