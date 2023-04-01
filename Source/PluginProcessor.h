@@ -9,8 +9,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "reverb/MultiChannelDelay.h"
-#include "reverb/Diffuser.h"
+#include "reverb/Reverb.h"
 #include "dsp/mix.h"
 
 //==============================================================================
@@ -70,14 +69,11 @@ private:
 
     juce::AudioBuffer<float> upmixedBuffer;
     juce::AudioBuffer<float> outputBuffer;
-
     
-    MultiChannelDelay<revChannels> delay;
-    Diffuser<revChannels, 6> diffuser {250};
+    Reverb<revChannels, 6> reverb;
+    
     signalsmith::mix::StereoMultiMixer<float, revChannels> multiMix;
     
-//    float dry;
-//    float wet;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeedbackReverbAudioProcessor)
 };

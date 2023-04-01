@@ -59,5 +59,5 @@ struct Diffuser
             steps[step].process(buffer);
         }
     }
-
+    
 };

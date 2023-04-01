@@ -19,7 +19,7 @@ class DiffusionStep
 public:
     
     float delayMsRange = 50;
-    
+
     void prepare(juce::dsp::ProcessSpec& spec)
     {
         delay.prepare(spec);
@@ -39,7 +39,6 @@ public:
             float rangeHigh = delaySamplesRange * (channel + 1) / channels;
             delaySamples[channel] = randomInRange(rangeLow, rangeHigh);
             delay.setMaximumDelayInSamples(delaySamples[channel] + 1);
-            delay.reset();
             flipPolarity[channel] = rand() % 2;
         }
     }
@@ -81,7 +80,6 @@ public:
 private:
     double randomInRange(double low, double high)
     {
-        // Use C++11 random number generation library
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<double> dist(low, high);

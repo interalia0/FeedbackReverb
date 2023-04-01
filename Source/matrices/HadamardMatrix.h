@@ -11,9 +11,6 @@
 #pragma once
 #include <JuceHeader.h>
 
-
-
-
 template <typename Sample, int channels>
 class HadamardMixer {
 public:

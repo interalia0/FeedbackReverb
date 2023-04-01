@@ -19,7 +19,7 @@ FeedbackReverbAudioProcessor::FeedbackReverbAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ), reverb(150, 5)
 #endif
 {
 
@@ -99,11 +99,9 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = samplesPerBlock;
     spec.numChannels = revChannels;
-    delay.prepare(spec);
-    delay.configure(sampleRate);
-    diffuser.prepare(spec);
-    diffuser.configure(sampleRate);
     
+    reverb.prepare(spec);
+    reverb.configure(sampleRate);
     
     upmixedBuffer.setSize(revChannels, samplesPerBlock);
     outputBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
@@ -111,8 +109,7 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
 
 void FeedbackReverbAudioProcessor::releaseResources()
 {
-    delay.reset();
-    diffuser.reset();
+    reverb.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -158,10 +155,9 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
         }
     }
     
-    diffuser.processInPlace(upmixedBuffer);
-    delay.processInPlace(upmixedBuffer);
-
     const float mixValue = treeState.getRawParameterValue("mix")->load();
+
+    reverb.processInPlace(upmixedBuffer);
     
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
@@ -225,8 +221,8 @@ FeedbackReverbAudioProcessor::createParameterLayout()
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     using pID = juce::ParameterID;
     using Range = juce::NormalisableRange<float>;
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"size", 1}, "Size", Range{ 10, 500, 0.1}, 150));
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 15, 0.1}, 3));
+//    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"size", 1}, "Size", Range{ 10, 500, 0.1}, 150));
+//    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 15, 0.1}, 3));
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"mix", 1}, "Mix", Range{0, 1, 0.01}, 0.5));
     return layout;
 }

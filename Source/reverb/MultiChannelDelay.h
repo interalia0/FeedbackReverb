@@ -13,13 +13,8 @@
 #include <JuceHeader.h>
 
 template <int channels>
-class MultiChannelDelay
-{
-public:
-    
-    float delayInMs = 150;
-    double specSampleRate;
-    
+struct MultiChannelDelay
+{    
     void prepare(juce::dsp::ProcessSpec& spec)
     {
         delay.prepare(spec);
@@ -38,9 +33,8 @@ public:
                 
         dampingFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
         dampingFilter.setCutoffFrequency(4000);
-        
     }
-    
+
     void reset()
     {
         delay.reset();
@@ -80,10 +74,9 @@ public:
         }        
     }
     
-            
-private:
+    float delayInMs = 150;
     float decayGain = 0.85;
-    
+        
     std::array<int, channels> delaySamples;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delay;
     HouseholderMixer<channels> householderMixer;
