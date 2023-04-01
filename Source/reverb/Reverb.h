@@ -15,24 +15,17 @@
 
 
 template <int channels, int diffusionSteps>
-struct Reverb
+class Reverb
 {
-    Reverb(float roomSizeMs, float rt60) : diffuser(roomSizeMs)
+public:
+    
+    Reverb(juce::AudioProcessorValueTreeState& state) : treeState(state)
     {
-        feedback.delayInMs = roomSizeMs;
-
-        // How long does our signal take to go around the feedback loop?
-        double typicalLoopMs = roomSizeMs*1.5;
-        // How many times will it do that during our RT60 period?
-        double loopsPerRt60 = rt60/(typicalLoopMs*0.001);
-        // This tells us how many dB to reduce per loop
-        double dbPerCycle = -60/loopsPerRt60;
-
-        feedback.decayGain = std::pow(10, dbPerCycle*0.05);
     }
     
     void prepare(juce::dsp::ProcessSpec& spec)
     {
+        specSampleRate = spec.sampleRate;
         diffuser.prepare(spec);
         feedback.prepare(spec);
     }
@@ -55,8 +48,38 @@ struct Reverb
         feedback.processInPlace(buffer);
     }
     
+    void setRt60()
+    {
+        rt60 = getRt60();
+        float typicalLoopMs = feedback.delayInMs * 1.5;
+        float loopsPerRt60 = rt60 / (typicalLoopMs * 0.001);
+        float dbPerCycle = -60 / loopsPerRt60;
+        decayValue = std::pow(10, dbPerCycle * 0.05);
+        feedback.setDecay(decayValue);
+    }
+    
+private:
+    
+    float getRt60()
+    {
+        return *treeState.getRawParameterValue("decay");
+    }
+    
+    float getSize()
+    {
+        return *treeState.getRawParameterValue("size");
+    }
+    
     static const int revChannels = 8;
-
+    double specSampleRate;
+    float rt60;
+    
+    float decayValue;
+    float sizeValue;
+    
     MultiChannelDelay<revChannels> feedback;
-    Diffuser<revChannels, diffusionSteps> diffuser;
+    Diffuser<revChannels, diffusionSteps> diffuser{150};
+    juce::AudioProcessorValueTreeState& treeState;
+    
+    
 };

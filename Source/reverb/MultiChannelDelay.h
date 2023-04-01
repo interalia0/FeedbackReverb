@@ -18,6 +18,7 @@ struct MultiChannelDelay
     void prepare(juce::dsp::ProcessSpec& spec)
     {
         delay.prepare(spec);
+        delay.setMaximumDelayInSamples(spec.sampleRate);
         dampingFilter.prepare(spec);
     }
     
@@ -28,17 +29,20 @@ struct MultiChannelDelay
         {
             float ratio = channel * 1.0 / channels;
             delaySamples[channel] = std::pow(2, ratio) * delaySamplesBase;
-            delay.setMaximumDelayInSamples(sampleRate * 2);
         }
-                
         dampingFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
-        dampingFilter.setCutoffFrequency(4000);
+        dampingFilter.setCutoffFrequency(500);
     }
 
     void reset()
     {
         delay.reset();
         dampingFilter.reset();
+    }
+        
+    void setDecay(float rt60)
+    {
+        decayGain = rt60;
     }
         
     void processInPlace(juce::AudioBuffer<float>& buffer)
@@ -51,6 +55,7 @@ struct MultiChannelDelay
             for (int sample = 0; sample < numSamples; ++sample)
             {
                 float delayedSample = delay.popSample(channel, delaySamples[channel], true);
+                dampingFilter.processSample(channel, delayedSample);
                 delayed.setSample(channel, sample, delayedSample);
             }
         }
@@ -65,9 +70,7 @@ struct MultiChannelDelay
                 float inputSample = buffer.getSample(channel, sample);
                 float mixedSample = mixed.getSample(channel, sample);
                 float sum = inputSample + mixedSample * decayGain;
-                
-                dampingFilter.processSample(channel, sum);
-                
+                                
                 buffer.setSample(channel, sample, sum);                
                 delay.pushSample(channel, sum);
             }
@@ -75,7 +78,7 @@ struct MultiChannelDelay
     }
     
     float delayInMs = 150;
-    float decayGain = 0.85;
+    float decayGain;
         
     std::array<int, channels> delaySamples;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delay;

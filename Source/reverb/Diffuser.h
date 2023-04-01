@@ -27,7 +27,7 @@ struct Diffuser
             step.delayMsRange = diffusionMs;
         }
     }
-    
+        
     void prepare (juce::dsp::ProcessSpec& spec)
     {
         for (auto& step : steps)
@@ -59,5 +59,4 @@ struct Diffuser
             steps[step].process(buffer);
         }
     }
-    
 };

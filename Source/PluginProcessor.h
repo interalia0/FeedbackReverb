@@ -65,15 +65,19 @@ public:
 
 
 private:
+    void setFilters();
+    
     static const int revChannels = 8;
 
+    std::array<float, revChannels> upmixed;
     juce::AudioBuffer<float> upmixedBuffer;
     juce::AudioBuffer<float> outputBuffer;
-    
-    Reverb<revChannels, 6> reverb;
-    
     signalsmith::mix::StereoMultiMixer<float, revChannels> multiMix;
-    
+
+    Reverb<revChannels, 6> reverb;
+    juce::dsp::StateVariableTPTFilter<float> lowpass;
+    juce::dsp::StateVariableTPTFilter<float> highpass;
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeedbackReverbAudioProcessor)
 };

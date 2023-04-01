@@ -19,7 +19,7 @@ FeedbackReverbAudioProcessor::FeedbackReverbAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       ), reverb(150, 5)
+                       ), reverb(treeState)
 #endif
 {
 
@@ -102,9 +102,14 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
     
     reverb.prepare(spec);
     reverb.configure(sampleRate);
+    lowpass.prepare(spec);
+    highpass.prepare(spec);
+    
+    highpass.setType(juce::dsp::StateVariableTPTFilterType::highpass);
     
     upmixedBuffer.setSize(revChannels, samplesPerBlock);
     outputBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
+    
 }
 
 void FeedbackReverbAudioProcessor::releaseResources()
@@ -144,21 +149,41 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
-        std::array<float, 2> inputStereo = {buffer.getSample(0, sample), buffer.getSample(1, sample)};
-        std::array<float, revChannels> upmixed;
-        
-        multiMix.stereoToMulti(inputStereo, upmixed);
-        
+        if (buffer.getNumChannels() >= 2)
+        {
+            std::array<float, 2> inputStereo = {buffer.getSample(0, sample), buffer.getSample(1, sample)};
+            multiMix.stereoToMulti(inputStereo, upmixed);
+        }
+        else if (buffer.getNumChannels() == 1)
+        {
+            std::array<float, 1> inputMono = {buffer.getSample(0, sample)};
+            multiMix.stereoToMulti(inputMono, upmixed);
+        }
+                
         for (int channel = 0; channel < revChannels; ++channel)
         {
             upmixedBuffer.setSample(channel, sample, upmixed[channel]);
         }
     }
     
+    reverb.setRt60();
+    reverb.processInPlace(upmixedBuffer);
+
+    setFilters();
+
+    for (int channel = 0; channel < upmixedBuffer.getNumChannels(); ++channel)
+    {
+        for (int sample = 0; sample < upmixedBuffer.getNumSamples(); ++sample)
+        {
+            auto reverbSample = upmixedBuffer.getSample(channel, sample);
+            auto filteredSample = lowpass.processSample(channel, reverbSample);
+            filteredSample = highpass.processSample(channel, filteredSample);
+            upmixedBuffer.setSample(channel, sample, filteredSample);
+        }
+    }
+    
     const float mixValue = treeState.getRawParameterValue("mix")->load();
 
-    reverb.processInPlace(upmixedBuffer);
-    
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
         std::array<float, revChannels> processed;
@@ -215,14 +240,24 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
     return new FeedbackReverbAudioProcessor();
 }
 
+void FeedbackReverbAudioProcessor::setFilters()
+{
+    float lowpassCutoff = treeState.getRawParameterValue("highcut")->load();
+    lowpass.setCutoffFrequency(lowpassCutoff);
+    
+    float highpassCutoff = treeState.getRawParameterValue("lowcut")->load();
+    highpass.setCutoffFrequency(highpassCutoff);
+}
+
 juce::AudioProcessorValueTreeState::ParameterLayout
 FeedbackReverbAudioProcessor::createParameterLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     using pID = juce::ParameterID;
     using Range = juce::NormalisableRange<float>;
-//    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"size", 1}, "Size", Range{ 10, 500, 0.1}, 150));
-//    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 15, 0.1}, 3));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 5, 0.1}, 2));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"highcut", 1}, "Highcut", Range{20, 20000, 1}, 8000));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"lowcut", 1}, "Lowcut", Range{20, 20000, 1}, 300));
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"mix", 1}, "Mix", Range{0, 1, 0.01}, 0.5));
     return layout;
 }

@@ -18,11 +18,12 @@ class DiffusionStep
 {
 public:
     
-    float delayMsRange = 50;
+    float delayMsRange = 80;
 
     void prepare(juce::dsp::ProcessSpec& spec)
     {
         delay.prepare(spec);
+        delay.setMaximumDelayInSamples(spec.sampleRate * 2);
     }
     
     void reset()
@@ -38,7 +39,6 @@ public:
             float rangeLow = delaySamplesRange * channel / channels;
             float rangeHigh = delaySamplesRange * (channel + 1) / channels;
             delaySamples[channel] = randomInRange(rangeLow, rangeHigh);
-            delay.setMaximumDelayInSamples(delaySamples[channel] + 1);
             flipPolarity[channel] = rand() % 2;
         }
     }
