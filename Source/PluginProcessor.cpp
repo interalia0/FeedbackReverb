@@ -22,12 +22,10 @@ FeedbackReverbAudioProcessor::FeedbackReverbAudioProcessor()
                        ), reverb(treeState)
 #endif
 {
-
 }
 
 FeedbackReverbAudioProcessor::~FeedbackReverbAudioProcessor()
 {
-
 }
 
 //==============================================================================
@@ -167,6 +165,7 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     }
     
     reverb.setRt60();
+    reverb.setSize();
     reverb.processInPlace(upmixedBuffer);
 
     setFilters();
@@ -255,9 +254,10 @@ FeedbackReverbAudioProcessor::createParameterLayout()
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     using pID = juce::ParameterID;
     using Range = juce::NormalisableRange<float>;
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 5, 0.1}, 2));
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"highcut", 1}, "Highcut", Range{20, 20000, 1}, 8000));
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"lowcut", 1}, "Lowcut", Range{20, 20000, 1}, 300));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 8, 0.1}, 2));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"size", 1}, "Size", Range{25, 500, 1}, 150));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"highcut", 1}, "Highcut", Range{20, 20000, 1, 1.5}, 8000));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"lowcut", 1}, "Lowcut", Range{20, 20000, 1, 0.1}, 150));
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"mix", 1}, "Mix", Range{0, 1, 0.01}, 0.5));
     return layout;
 }

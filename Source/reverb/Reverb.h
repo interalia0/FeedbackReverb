@@ -55,9 +55,14 @@ public:
         float loopsPerRt60 = rt60 / (typicalLoopMs * 0.001);
         float dbPerCycle = -60 / loopsPerRt60;
         decayValue = std::pow(10, dbPerCycle * 0.05);
-        feedback.setDecay(decayValue);
+        feedback.updateDecay(decayValue);
     }
     
+    void setSize()
+    {
+        sizeValue = getSize();
+        feedback.updateTime(sizeValue);
+    }
 private:
     
     float getRt60()
