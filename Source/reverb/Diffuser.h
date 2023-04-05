@@ -51,12 +51,22 @@ struct Diffuser
             step.configure(sampleRate);
         }
     }
+    
+    void updateTime (float size)
+    {
+        for (auto& step : steps)
+        {
+            step.updateTime(size);
+        }
+    }
 
-    void processInPlace(juce::AudioBuffer<float>& buffer)
+    juce::AudioBuffer<float> processInPlace(juce::AudioBuffer<float>& buffer)
     {
         for (int step = 0; step < stepCount; ++step)
         {
-            steps[step].process(buffer);
+            buffer = steps[step].process(buffer);
         }
+        
+        return buffer;
     }
 };

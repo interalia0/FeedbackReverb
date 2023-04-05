@@ -67,7 +67,7 @@ public:
 private:
     void setFilters();
     
-    static const int revChannels = 8;
+    static const int revChannels = 12;
 
     std::array<float, revChannels> upmixed;
     juce::AudioBuffer<float> upmixedBuffer;

@@ -19,33 +19,37 @@ class Reverb
 {
 public:
     
-    Reverb(juce::AudioProcessorValueTreeState& state) : treeState(state)
-    {
-    }
+    Reverb(juce::AudioProcessorValueTreeState& state) : treeState(state) {}
     
     void prepare(juce::dsp::ProcessSpec& spec)
     {
         specSampleRate = spec.sampleRate;
         diffuser.prepare(spec);
         feedback.prepare(spec);
+        lateDiffuser.prepare(spec);
     }
     
     void configure(double sampleRate)
     {
         diffuser.configure(sampleRate);
         feedback.configure(sampleRate);
+        lateDiffuser.configure(sampleRate);
     }
     
     void reset()
     {
         diffuser.reset();
         feedback.reset();
+        lateDiffuser.reset();
     }
     
-    void processInPlace(juce::AudioBuffer<float>& buffer)
+    juce::AudioBuffer<float> processInPlace(juce::AudioBuffer<float>& buffer)
     {
-        diffuser.processInPlace(buffer);
-        feedback.processInPlace(buffer);
+        auto diffuse = diffuser.processInPlace(buffer);
+        auto longLasting = feedback.processInPlace(diffuse);
+        auto diffuseLongLasting = lateDiffuser.processInPlace(longLasting);
+        
+        return diffuseLongLasting;
     }
     
     void setRt60()
@@ -65,26 +69,25 @@ public:
     }
 private:
     
-    float getRt60()
+    float getRt60() const
     {
         return *treeState.getRawParameterValue("decay");
     }
     
-    float getSize()
+    float getSize() const
     {
         return *treeState.getRawParameterValue("size");
     }
     
-    static const int revChannels = 8;
     double specSampleRate;
     float rt60;
     
     float decayValue;
     float sizeValue;
     
-    MultiChannelDelay<revChannels> feedback;
-    Diffuser<revChannels, diffusionSteps> diffuser{150};
+    MultiChannelDelay<channels> feedback;
+    Diffuser<channels, diffusionSteps> diffuser{100};
+    Diffuser<channels, diffusionSteps> lateDiffuser{250};
+
     juce::AudioProcessorValueTreeState& treeState;
-    
-    
 };

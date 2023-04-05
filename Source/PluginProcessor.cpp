@@ -166,7 +166,7 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     
     reverb.setRt60();
     reverb.setSize();
-    reverb.processInPlace(upmixedBuffer);
+    upmixedBuffer = reverb.processInPlace(upmixedBuffer);
 
     setFilters();
 
@@ -221,15 +221,16 @@ juce::AudioProcessorEditor* FeedbackReverbAudioProcessor::createEditor()
 //==============================================================================
 void FeedbackReverbAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    juce::MemoryOutputStream mos (destData, true);
+    treeState.state.writeToStream (mos);
 }
 
 void FeedbackReverbAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    auto tree = juce::ValueTree::readFromData (data, static_cast<size_t> (sizeInBytes));
+
+    if (tree.isValid())
+        treeState.replaceState (tree);
 }
 
 //==============================================================================
@@ -254,10 +255,10 @@ FeedbackReverbAudioProcessor::createParameterLayout()
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     using pID = juce::ParameterID;
     using Range = juce::NormalisableRange<float>;
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 8, 0.1}, 2));
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"size", 1}, "Size", Range{25, 500, 1}, 150));
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"highcut", 1}, "Highcut", Range{20, 20000, 1, 1.5}, 8000));
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"lowcut", 1}, "Lowcut", Range{20, 20000, 1, 0.1}, 150));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 30, 0.1}, 2));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"size", 1}, "Size", Range{50, 300, 1}, 150));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"highcut", 1}, "Highcut", Range{20, 20000, 1, 1.4}, 8000));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"lowcut", 1}, "Lowcut", Range{20, 20000, 1, 0.15}, 100));
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"mix", 1}, "Mix", Range{0, 1, 0.01}, 0.5));
     return layout;
 }

@@ -42,7 +42,7 @@ struct MultiChannelDelay
         }
     }
 
-    void reset()
+    void reset() 
     {
         delay.reset();
     }
@@ -64,7 +64,7 @@ struct MultiChannelDelay
         }
     }
         
-    void processInPlace(juce::AudioBuffer<float>& buffer)
+    juce::AudioBuffer<float> processInPlace(juce::AudioBuffer<float>& buffer)
     {
         int numSamples = buffer.getNumSamples();
         juce::AudioBuffer<float> delayed(channels, numSamples);
@@ -95,7 +95,9 @@ struct MultiChannelDelay
                 buffer.setSample(channel, sample, sum);                
                 delay.pushSample(channel, sum);
             }
-        }        
+        }
+        
+        return buffer;
     }
     
     float delayInMs = 150;

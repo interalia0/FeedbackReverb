@@ -19,11 +19,19 @@ class DiffusionStep
 public:
     
     float delayMsRange = 80;
-
+    float delaySamplesRange;
+    
     void prepare(juce::dsp::ProcessSpec& spec)
     {
+        hostSampleRate = spec.sampleRate;
         delay.prepare(spec);
         delay.setMaximumDelayInSamples(spec.sampleRate * 2);
+        
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            smoothingFilters[channel].prepare(spec);
+            smoothingFilters[channel].setCutoffFrequency(1.2);
+        }
     }
     
     void reset()
@@ -33,7 +41,7 @@ public:
 
     void configure(double sampleRate)
     {
-        float delaySamplesRange = delayMsRange / 1000 * sampleRate;
+        delaySamplesRange = delayMsRange / 1000 * sampleRate;
         for (int channel = 0; channel < channels; ++channel)
         {
             float rangeLow = delaySamplesRange * channel / channels;
@@ -43,7 +51,19 @@ public:
         }
     }
     
-    void process(juce::AudioBuffer<float>& buffer)
+    void updateTime(float size)
+    {
+        delayMsRange = size;
+        delaySamplesRange = delayMsRange / 1000 * hostSampleRate;
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            float rangeLow = delaySamplesRange * channel / channels;
+            float rangeHigh = delaySamplesRange * (channel + 1) / channels;
+            delaySamples[channel] = randomInRange(rangeLow, rangeHigh);
+        }
+    }
+    
+    juce::AudioBuffer<float> process(juce::AudioBuffer<float>& buffer)
     {
         int numSamples = buffer.getNumSamples();
         juce::AudioBuffer<float> delayed(channels, numSamples);
@@ -52,8 +72,7 @@ public:
         {
             for (int sample = 0; sample < numSamples; ++sample)
             {
-                float inputSample = buffer.getSample(channel, sample);
-
+                float inputSample = buffer.getSample(channel, sample);                
                 delay.pushSample(channel, inputSample);
                 float delayedSample = delay.popSample(channel, delaySamples[channel], true);
                 delayed.setSample(channel, sample, delayedSample);
@@ -67,14 +86,17 @@ public:
         {
             for (int sample = 0; sample < numSamples; ++sample)
             {
-                float inSample = mixed.getSample(channel, sample);
+                float mixedSample = mixed.getSample(channel, sample);
+                
                 if (flipPolarity[channel])
                 {
-                    inSample *= -1;
+                    mixedSample *= -1;
                 }
-                buffer.setSample(channel, sample, inSample);
+                buffer.setSample(channel, sample, mixedSample);
             }
         }
+        
+        return buffer;
     }
 
 private:
@@ -88,9 +110,13 @@ private:
     }
     
     std::array<int, channels> delaySamples;
+    std::array<float, channels> smoothDelaySamples;
+    
+    double hostSampleRate;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delay;
     std::array<bool, channels> flipPolarity;
     HadamardMixer<float, channels> hadamard;
+    std::array<juce::dsp::FirstOrderTPTFilter<float>, channels> smoothingFilters;
 };
     
     
