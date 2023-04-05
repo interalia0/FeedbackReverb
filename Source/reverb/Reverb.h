@@ -26,30 +26,26 @@ public:
         specSampleRate = spec.sampleRate;
         diffuser.prepare(spec);
         feedback.prepare(spec);
-        lateDiffuser.prepare(spec);
     }
     
     void configure(double sampleRate)
     {
         diffuser.configure(sampleRate);
         feedback.configure(sampleRate);
-        lateDiffuser.configure(sampleRate);
     }
     
     void reset()
     {
         diffuser.reset();
         feedback.reset();
-        lateDiffuser.reset();
     }
     
     juce::AudioBuffer<float> processInPlace(juce::AudioBuffer<float>& buffer)
     {
         auto diffuse = diffuser.processInPlace(buffer);
-        auto longLasting = feedback.processInPlace(diffuse);
-        auto diffuseLongLasting = lateDiffuser.processInPlace(longLasting);
+        auto output = feedback.processInPlace(diffuse);
         
-        return diffuseLongLasting;
+        return output;
     }
     
     void setRt60()
@@ -86,8 +82,7 @@ private:
     float sizeValue;
     
     MultiChannelDelay<channels> feedback;
-    Diffuser<channels, diffusionSteps> diffuser{100};
-    Diffuser<channels, diffusionSteps> lateDiffuser{250};
+    Diffuser<channels, diffusionSteps> diffuser{250};
 
     juce::AudioProcessorValueTreeState& treeState;
 };

@@ -51,18 +51,6 @@ public:
         }
     }
     
-    void updateTime(float size)
-    {
-        delayMsRange = size;
-        delaySamplesRange = delayMsRange / 1000 * hostSampleRate;
-        for (int channel = 0; channel < channels; ++channel)
-        {
-            float rangeLow = delaySamplesRange * channel / channels;
-            float rangeHigh = delaySamplesRange * (channel + 1) / channels;
-            delaySamples[channel] = randomInRange(rangeLow, rangeHigh);
-        }
-    }
-    
     juce::AudioBuffer<float> process(juce::AudioBuffer<float>& buffer)
     {
         int numSamples = buffer.getNumSamples();

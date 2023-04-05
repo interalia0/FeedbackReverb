@@ -13,8 +13,11 @@
 #include <JuceHeader.h>
 
 template <int channels>
-struct MultiChannelDelay
-{    
+class MultiChannelDelay
+{
+public:
+    float delayInMs = 150;
+
     void prepare(juce::dsp::ProcessSpec& spec)
     {
         hostSampleRate = spec.sampleRate;
@@ -27,7 +30,7 @@ struct MultiChannelDelay
         for (int channel = 0; channel < channels; ++channel)
         {
             smoothingFilters[channel].prepare(spec);
-            smoothingFilters[channel].setCutoffFrequency(1.2);
+            smoothingFilters[channel].setCutoffFrequency(1);
         }
 
     }
@@ -99,8 +102,10 @@ struct MultiChannelDelay
         
         return buffer;
     }
+
+private:
     
-    float delayInMs = 150;
+    
     float delaySamplesBase;
     float decayGain;
     double hostSampleRate;

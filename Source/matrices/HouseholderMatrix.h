@@ -15,7 +15,7 @@ template<int size>
 struct HouseholderMixer
 {
     float factor;
-    
+
     HouseholderMixer()
     {
         static_assert(size >= 0, "Size must be positive");
@@ -25,21 +25,22 @@ struct HouseholderMixer
     void process(const juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& output)
     {
         int numSamples = input.getNumSamples();
-        
+
         for (int sample = 0; sample < numSamples; ++sample)
         {
             for (int channel = 0; channel < size; ++channel)
             {
-                float sum = input.getSample(channel, sample);
-                for (int i = 1; i < size; ++i)
+                float sum = 0.0f;
+                for (int i = 0; i < size; ++i)
                 {
                     sum += input.getSample((channel + i) % size, sample);
                 }
                 sum *= factor;
+
                 for (int i = 0; i < size; ++i)
                 {
-                    float newVal = input.getSample(channel, sample) + sum;
-                    output.setSample(channel, sample, newVal);
+                    float newVal = input.getSample((channel + i) % size, sample) + sum;
+                    output.setSample((channel + i) % size, sample, newVal);
                 }
             }
         }

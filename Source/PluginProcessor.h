@@ -66,15 +66,17 @@ public:
 
 private:
     void setFilters();
+    float filterProcess(int channel, float inputSample);
     
-    static const int revChannels = 12;
+    static const int revChannels = 10;
+    static const int diffChannels = 6;
 
     std::array<float, revChannels> upmixed;
     juce::AudioBuffer<float> upmixedBuffer;
     juce::AudioBuffer<float> outputBuffer;
     signalsmith::mix::StereoMultiMixer<float, revChannels> multiMix;
 
-    Reverb<revChannels, 6> reverb;
+    Reverb<revChannels, diffChannels> reverb;
     juce::dsp::StateVariableTPTFilter<float> lowpass;
     juce::dsp::StateVariableTPTFilter<float> highpass;
 
