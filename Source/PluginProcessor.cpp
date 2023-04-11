@@ -107,7 +107,6 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
     
     upmixedBuffer.setSize(revChannels, samplesPerBlock);
     outputBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
-    
 }
 
 void FeedbackReverbAudioProcessor::releaseResources()
@@ -179,7 +178,6 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     }
     
     reverb.setRt60();
-    reverb.setSize();
     upmixedBuffer = reverb.processInPlace(upmixedBuffer);
 
     setFilters();
@@ -200,6 +198,7 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
         {
             const float input = buffer.getSample(channel, sample);
             auto filteredSample = filterProcess(channel, downmixed[channel]);
+            
             const float output = input * (1.0 - mixValue) + (filteredSample * mixValue * scaling);
             buffer.setSample(channel, sample, output);
         }
@@ -242,17 +241,17 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 
 void FeedbackReverbAudioProcessor::setFilters()
 {
-    float lowpassCutoff = treeState.getRawParameterValue("highcut")->load();
+    const float lowpassCutoff = treeState.getRawParameterValue("highcut")->load();
     lowpass.setCutoffFrequency(lowpassCutoff);
     
-    float highpassCutoff = treeState.getRawParameterValue("lowcut")->load();
+    const float highpassCutoff = treeState.getRawParameterValue("lowcut")->load();
     highpass.setCutoffFrequency(highpassCutoff);
 }
 
 float FeedbackReverbAudioProcessor::filterProcess(int channel, float inputSample)
 {
     auto filteredSample = lowpass.processSample(channel, inputSample);
-    filteredSample = highpass.processSample(channel, inputSample);
+    filteredSample = highpass.processSample(channel, filteredSample);
     
     return filteredSample;
 }
@@ -264,7 +263,6 @@ FeedbackReverbAudioProcessor::createParameterLayout()
     using pID = juce::ParameterID;
     using Range = juce::NormalisableRange<float>;
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 30, 0.1}, 2));
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"size", 1}, "Size", Range{50, 200, 1}, 60));
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"highcut", 1}, "Highcut", Range{20, 20000, 1, 1.4}, 8000));
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"lowcut", 1}, "Lowcut", Range{20, 20000, 1, 0.15}, 100));
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"mix", 1}, "Mix", Range{0, 1, 0.01}, 0.5));

@@ -58,21 +58,11 @@ public:
         feedback.updateDecay(decayValue);
     }
     
-    void setSize()
-    {
-        sizeValue = getSize();
-        feedback.updateTime(sizeValue);
-    }
 private:
     
     float getRt60() const
     {
         return *treeState.getRawParameterValue("decay");
-    }
-    
-    float getSize() const
-    {
-        return *treeState.getRawParameterValue("size");
     }
     
     double specSampleRate;

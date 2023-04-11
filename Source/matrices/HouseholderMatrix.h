@@ -15,7 +15,7 @@ template<int size>
 struct HouseholderMixer
 {
     float factor;
-
+    
     HouseholderMixer()
     {
         static_assert(size >= 0, "Size must be positive");

@@ -16,7 +16,7 @@ template <int channels>
 class MultiChannelDelay
 {
 public:
-    float delayInMs = 150;
+    float delayInMs = 60;
 
     void prepare(juce::dsp::ProcessSpec& spec)
     {
@@ -54,19 +54,7 @@ public:
     {
         decayGain = rt60;
     }
-    
-    void updateTime(float size)
-    {
-        delayInMs = size;
-        delaySamplesBase = delayInMs / 1000 * hostSampleRate;
-        
-        for (int channel = 0; channel < channels; ++channel)
-        {
-            float ratio = channel * 1.0 / channels;
-            delaySamples[channel] = std::pow(2, ratio) * delaySamplesBase;
-        }
-    }
-        
+            
     juce::AudioBuffer<float> processInPlace(juce::AudioBuffer<float>& buffer)
     {
         int numSamples = buffer.getNumSamples();
@@ -103,8 +91,7 @@ public:
         return buffer;
     }
 
-private:
-    
+private:    
     
     float delaySamplesBase;
     float decayGain;
@@ -113,7 +100,7 @@ private:
     std::array<int, channels> delaySamples;
     std::array<float, channels> smoothDelaySamples;
 
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delay;
+    juce::dsp::DelayLine<float> delay;
     HouseholderMixer<channels> householderMixer;
     
     juce::dsp::StateVariableTPTFilter<float> dampingFilter;

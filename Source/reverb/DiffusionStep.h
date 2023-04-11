@@ -26,6 +26,8 @@ public:
         hostSampleRate = spec.sampleRate;
         delay.prepare(spec);
         delay.setMaximumDelayInSamples(spec.sampleRate * 2);
+        dampingFilter.prepare(spec);
+        dampingFilter.setCutoffFrequency(12000);
         
         for (int channel = 0; channel < channels; ++channel)
         {
@@ -75,6 +77,7 @@ public:
             for (int sample = 0; sample < numSamples; ++sample)
             {
                 float mixedSample = mixed.getSample(channel, sample);
+                mixedSample = dampingFilter.processSample(channel, mixedSample);
                 
                 if (flipPolarity[channel])
                 {
@@ -101,9 +104,11 @@ private:
     std::array<float, channels> smoothDelaySamples;
     
     double hostSampleRate;
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delay;
+    juce::dsp::DelayLine<float> delay;
     std::array<bool, channels> flipPolarity;
     HadamardMixer<float, channels> hadamard;
+    
+    juce::dsp::StateVariableTPTFilter<float> dampingFilter;
     std::array<juce::dsp::FirstOrderTPTFilter<float>, channels> smoothingFilters;
 };
     

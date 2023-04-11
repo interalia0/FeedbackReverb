@@ -62,8 +62,6 @@ public:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     juce::AudioProcessorValueTreeState treeState {*this, nullptr, "Parameters", createParameterLayout()};
     
-
-
 private:
     void setFilters();
     float filterProcess(int channel, float inputSample);
