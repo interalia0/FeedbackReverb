@@ -19,7 +19,7 @@ FeedbackReverbAudioProcessor::FeedbackReverbAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       ), reverb(treeState)
+                       ), earlyReverb(treeState, 70), lateReverb(treeState, 1200)
 #endif
 {
 }
@@ -98,23 +98,29 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
     spec.maximumBlockSize = samplesPerBlock;
     spec.numChannels = revChannels;
     
-    reverb.prepare(spec);
-    reverb.configure(sampleRate);
-    lowpass.prepare(spec);
-    highpass.prepare(spec);
-    
+    earlyReverb.prepare(spec);
+    earlyReverb.configure(sampleRate);
+    earlyReverb.setDelayInMs(50);
+    lateReverb.prepare(spec);
+    lateReverb.configure(sampleRate);
+    lateReverb.setDelayInMs(150);
+
     dryWet.prepare(spec);
-    dryWet.setMixingRule(juce::dsp::DryWetMixingRule::linear);
-        
-    highpass.setType(juce::dsp::StateVariableTPTFilterType::highpass);
+    dryWet.setMixingRule(juce::dsp::DryWetMixingRule::balanced);
     
-    upmixedBuffer.setSize(revChannels, samplesPerBlock);
-    outputBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
+    lowcut.prepare(spec);
+    lowcut.setType(juce::dsp::StateVariableTPTFilterType::highpass);
+    
+    earlyRefBuffer.setSize(revChannels, samplesPerBlock);
+    lateRefBuffer.setSize(revChannels, samplesPerBlock);
 }
 
 void FeedbackReverbAudioProcessor::releaseResources()
 {
-    reverb.reset();
+    earlyReverb.reset();
+    lateReverb.reset();
+    dryWet.reset();
+    lowcut.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -157,93 +163,44 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     const auto& input = context.getInputBlock();
     const auto& output = context.getOutputBlock();
     
-    dryWet.pushDrySamples(input);
     dryWet.setWetMixProportion(mixValue);
+    dryWet.pushDrySamples(input);
 
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
         for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-            inputArray[channel] = buffer.getSample(channel, sample);
+            inputArray[channel] = input.getSample(channel, sample);
         }
 
         multiMix.stereoToMulti(inputArray, upMixed);
 
         for (int channel = 0; channel < revChannels; ++channel) {
-            upmixedBuffer.setSample(channel, sample, upMixed[channel]);
+            earlyRefBuffer.setSample(channel, sample, upMixed[channel]);
+            lateRefBuffer.setSample(channel, sample, upMixed[channel]);
         }
     }
-    reverb.setRt60();
-    reverb.updateDamping(dampingValue);
-    upmixedBuffer = reverb.processInPlace(upmixedBuffer);
+    
+    lateReverb.setRt60();
+    earlyReverb.updateDamping(dampingValue);
+    lateReverb.updateDamping(dampingValue);
+
     setFilters();
 
-    for (int sample = 0; sample < upmixedBuffer.getNumSamples(); ++sample) {
-        for (int channel = 0; channel < upmixedBuffer.getNumChannels(); ++channel) {
-            processed[channel] = upmixedBuffer.getSample(channel, sample) * scaling;
+    auto erB = earlyReverb.processInPlace(earlyRefBuffer);
+    auto lrB = lateReverb.processInPlace(lateRefBuffer);
+
+    for (int sample = 0; sample < earlyRefBuffer.getNumSamples(); ++sample) {
+        for (int channel = 0; channel < earlyRefBuffer.getNumChannels(); ++channel) {
+            processed[channel] = scaling * (erB.getSample(channel, sample) + lrB.getSample(channel, sample));
         }
+        
         multiMix.multiToStereo(processed, outputArray);
 
         for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-            output.setSample(channel, sample, outputArray[channel]);
+            auto filteredSample = filterProcess(channel, outputArray[channel]);
+            output.setSample(channel, sample, filteredSample);
         }
     }
-
     dryWet.mixWetSamples(output);
-
-//    if (buffer.getNumChannels() >= 2)
-//    {
-//        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
-//        {
-//            std::array<float, 2> inputStereo = {buffer.getSample(0, sample), buffer.getSample(1, sample)};
-//            multiMix.stereoToMulti(inputStereo, upMixed);
-//
-//            for (int channel = 0; channel < revChannels; ++channel)
-//            {
-//                upmixedBuffer.setSample(channel, sample, upMixed[channel]);
-//            }
-//        }
-//    }
-//    else if (buffer.getNumChannels() == 1)
-//    {
-//        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
-//        {
-//            std::array<float, 1> inputMono = {buffer.getSample(0, sample)};
-//            multiMix.stereoToMulti(inputMono, upMixed);
-//
-//            for (int channel = 0; channel < revChannels; ++channel)
-//            {
-//                upmixedBuffer.setSample(channel, sample, upMixed[channel]);
-//            }
-//        }
-//    }
-//
-//    reverb.setRt60();
-//    upmixedBuffer = reverb.processInPlace(upmixedBuffer);
-//
-//    setFilters();
-//
-//    for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
-//    {
-//        std::array<float, revChannels> processed;
-//        std::array<float, 2> downmixed;
-//
-//        for (int channel = 0; channel < revChannels; ++channel)
-//        {
-//            processed[channel] = upmixedBuffer.getSample(channel, sample);
-//        }
-//
-//        multiMix.multiToStereo(processed, downmixed);
-//
-//        for (int channel = 0; channel < 2; ++channel)
-//        {
-//            const float input = buffer.getSample(channel, sample);
-//            auto filteredSample = filterProcess(channel, downmixed[channel]);
-//
-//            const float output = input * (1.0 - mixValue) + (filteredSample * mixValue * scaling);
-//            buffer.setSample(channel, sample, output);
-//        }
-//    }
-    
-    
 }
 
 //==============================================================================
@@ -283,12 +240,12 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 void FeedbackReverbAudioProcessor::setFilters()
 {
     const float highpassCutoff = treeState.getRawParameterValue("lowcut")->load();
-    highpass.setCutoffFrequency(highpassCutoff);
+    lowcut.setCutoffFrequency(highpassCutoff);
 }
 
 float FeedbackReverbAudioProcessor::filterProcess(int channel, float inputSample)
 {
-    auto filteredSample = highpass.processSample(channel, inputSample);
+    auto filteredSample = lowcut.processSample(channel, inputSample);
     
     return filteredSample;
 }

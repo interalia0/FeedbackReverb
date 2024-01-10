@@ -67,22 +67,24 @@ private:
     float filterProcess(int channel, float inputSample);
     
     static const int revChannels = 12;
-    static const int diffSteps = 4;
-
-    std::array<float, revChannels> upMixed;
-    std::array<float, revChannels> processed;
 
     std::array<float, 2> inputArray;
     std::array<float, 2> outputArray;
     
+    std::array<float, revChannels> upMixed;
+    std::array<float, revChannels> earlyRefArray;
+    std::array<float, revChannels> lateRefArray;
+    std::array<float, revChannels> processed;
 
-    juce::AudioBuffer<float> upmixedBuffer;
-    juce::AudioBuffer<float> outputBuffer;
+    juce::AudioBuffer<float> earlyRefBuffer;
+    juce::AudioBuffer<float> lateRefBuffer;
+
     signalsmith::mix::StereoMultiMixer<float, revChannels> multiMix;
 
-    Reverb<revChannels, 6> reverb;
-    juce::dsp::StateVariableTPTFilter<float> lowpass;
-    juce::dsp::StateVariableTPTFilter<float> highpass;
+    Reverb<revChannels, 4> earlyReverb;
+    Reverb<revChannels, 6> lateReverb;
+    
+    juce::dsp::StateVariableTPTFilter<float> lowcut;
     juce::dsp::DryWetMixer<float> dryWet;
 
     //==============================================================================

@@ -19,54 +19,53 @@ class Reverb
 {
 public:
     
-    Reverb(juce::AudioProcessorValueTreeState& state) : treeState(state) {}
+    Reverb(juce::AudioProcessorValueTreeState& state, float diffuserSize) : treeState(state), diffuser(diffuserSize) {
+    }
     
-    void prepare(juce::dsp::ProcessSpec& spec)
-    {
+    void prepare(juce::dsp::ProcessSpec& spec) {
         specSampleRate = spec.sampleRate;
-        lateDiffuser.prepare(spec);
-        lateReflections.prepare(spec);
+        diffuser.prepare(spec);
+        feedback.prepare(spec);
     }
     
-    void configure(double sampleRate)
-    {
-        lateDiffuser.configure(sampleRate);
-        lateReflections.configure(sampleRate);
+    void configure(double sampleRate) {
+        diffuser.configure(sampleRate);
+        feedback.configure(sampleRate);
     }
     
-    void reset()
-    {
-        lateDiffuser.reset();
-        lateReflections.reset();
+    void reset() {
+        diffuser.reset();
+        feedback.reset();
     }
     
-    juce::AudioBuffer<float> processInPlace(juce::AudioBuffer<float>& buffer)
-    {
-        auto diffuse = lateDiffuser.processInPlace(buffer);
-        auto output = lateReflections.processInPlace(diffuse);
+    void setDelayInMs(float delayMs) {
+        feedback.delayInMs = delayMs;
+    }
+
+    juce::AudioBuffer<float> processInPlace(juce::AudioBuffer<float>& buffer) {
+        auto diffuse = diffuser.processInPlace(buffer);
+        auto output = feedback.processInPlace(diffuse);
         
         return output;
     }
     
-    void setRt60()
-    {
+    void setRt60() {
         rt60 = getRt60();
-        float typicalLoopMs = lateReflections.delayInMs * 1.5;
+        float typicalLoopMs = feedback.delayInMs * 1.5;
         float loopsPerRt60 = rt60 / (typicalLoopMs * 0.001);
         float dbPerCycle = -60 / loopsPerRt60;
         decayValue = std::pow(10, dbPerCycle * 0.05);
-        lateReflections.updateDecay(decayValue);
+        feedback.updateDecay(decayValue);
     }
     
-    void updateDamping(float dampingFreq)
-    {
-        lateReflections.dampingFilter.setCutoffFrequency(dampingFreq);
-        lateDiffuser.updateDamping(dampingFreq);
+    void updateDamping(float dampingFreq) {
+        diffuser.updateDamping(dampingFreq);
+        feedback.dampingFilter.setCutoffFrequency(dampingFreq);
     }
 private:
+    juce::AudioProcessorValueTreeState& treeState;
     
-    float getRt60() const
-    {
+    float getRt60() const {
         return *treeState.getRawParameterValue("decay");
     }
     
@@ -75,11 +74,8 @@ private:
     
     float decayValue;
     float sizeValue;
+        
+    MultiChannelDelay<channels> feedback;
+    Diffuser<channels, diffusionSteps> diffuser;
     
-    MultiChannelDelay<channels> earlyReflections;
-    MultiChannelDelay<channels> lateReflections;
-    Diffuser<channels, 2> earlyDiffuser{50};
-    Diffuser<channels, diffusionSteps> lateDiffuser{800};
-
-    juce::AudioProcessorValueTreeState& treeState;
 };

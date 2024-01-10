@@ -16,7 +16,9 @@ template <int channels>
 class MultiChannelDelay
 {
 public:
-    float delayInMs = 60;
+    float delayInMs = 125;
+    float decayGain = 0.6f;
+
     juce::dsp::StateVariableTPTFilter<float> dampingFilter;
 
 
@@ -96,7 +98,6 @@ public:
 private:    
     
     float delaySamplesBase;
-    float decayGain;
     double hostSampleRate;
         
     std::array<int, channels> delaySamples;

@@ -19,7 +19,7 @@ struct Diffuser
     using Step = DiffusionStep<channels>;
     std::array<Step, stepCount> steps;
 
-    Diffuser(double diffusionMs)
+    Diffuser(float diffusionMs)
     {
         for (auto &step : steps)
         {
