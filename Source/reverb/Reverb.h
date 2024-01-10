@@ -24,26 +24,26 @@ public:
     void prepare(juce::dsp::ProcessSpec& spec)
     {
         specSampleRate = spec.sampleRate;
-        diffuser.prepare(spec);
-        feedback.prepare(spec);
+        lateDiffuser.prepare(spec);
+        lateReflections.prepare(spec);
     }
     
     void configure(double sampleRate)
     {
-        diffuser.configure(sampleRate);
-        feedback.configure(sampleRate);
+        lateDiffuser.configure(sampleRate);
+        lateReflections.configure(sampleRate);
     }
     
     void reset()
     {
-        diffuser.reset();
-        feedback.reset();
+        lateDiffuser.reset();
+        lateReflections.reset();
     }
     
     juce::AudioBuffer<float> processInPlace(juce::AudioBuffer<float>& buffer)
     {
-        auto diffuse = diffuser.processInPlace(buffer);
-        auto output = feedback.processInPlace(diffuse);
+        auto diffuse = lateDiffuser.processInPlace(buffer);
+        auto output = lateReflections.processInPlace(diffuse);
         
         return output;
     }
@@ -51,13 +51,18 @@ public:
     void setRt60()
     {
         rt60 = getRt60();
-        float typicalLoopMs = feedback.delayInMs * 1.5;
+        float typicalLoopMs = lateReflections.delayInMs * 1.5;
         float loopsPerRt60 = rt60 / (typicalLoopMs * 0.001);
         float dbPerCycle = -60 / loopsPerRt60;
         decayValue = std::pow(10, dbPerCycle * 0.05);
-        feedback.updateDecay(decayValue);
+        lateReflections.updateDecay(decayValue);
     }
     
+    void updateDamping(float dampingFreq)
+    {
+        lateReflections.dampingFilter.setCutoffFrequency(dampingFreq);
+        lateDiffuser.updateDamping(dampingFreq);
+    }
 private:
     
     float getRt60() const
@@ -71,8 +76,10 @@ private:
     float decayValue;
     float sizeValue;
     
-    MultiChannelDelay<channels> feedback;
-    Diffuser<channels, diffusionSteps> diffuser{250};
+    MultiChannelDelay<channels> earlyReflections;
+    MultiChannelDelay<channels> lateReflections;
+    Diffuser<channels, 2> earlyDiffuser{50};
+    Diffuser<channels, diffusionSteps> lateDiffuser{800};
 
     juce::AudioProcessorValueTreeState& treeState;
 };

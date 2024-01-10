@@ -17,6 +17,8 @@ class MultiChannelDelay
 {
 public:
     float delayInMs = 60;
+    juce::dsp::StateVariableTPTFilter<float> dampingFilter;
+
 
     void prepare(juce::dsp::ProcessSpec& spec)
     {
@@ -25,7 +27,7 @@ public:
         delay.prepare(spec);
         delay.setMaximumDelayInSamples(spec.sampleRate);
         dampingFilter.prepare(spec);
-        dampingFilter.setCutoffFrequency(5500);
+        dampingFilter.setCutoffFrequency(15000);
         
         for (int channel = 0; channel < channels; ++channel)
         {
@@ -103,7 +105,6 @@ private:
     juce::dsp::DelayLine<float> delay;
     HouseholderMixer<channels> householderMixer;
     
-    juce::dsp::StateVariableTPTFilter<float> dampingFilter;
     std::array<juce::dsp::FirstOrderTPTFilter<float>, channels> smoothingFilters;
 };
 

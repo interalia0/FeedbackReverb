@@ -66,17 +66,24 @@ private:
     void setFilters();
     float filterProcess(int channel, float inputSample);
     
-    static const int revChannels = 10;
-    static const int diffChannels = 6;
+    static const int revChannels = 12;
+    static const int diffSteps = 4;
 
-    std::array<float, revChannels> upmixed;
+    std::array<float, revChannels> upMixed;
+    std::array<float, revChannels> processed;
+
+    std::array<float, 2> inputArray;
+    std::array<float, 2> outputArray;
+    
+
     juce::AudioBuffer<float> upmixedBuffer;
     juce::AudioBuffer<float> outputBuffer;
     signalsmith::mix::StereoMultiMixer<float, revChannels> multiMix;
 
-    Reverb<revChannels, diffChannels> reverb;
+    Reverb<revChannels, 6> reverb;
     juce::dsp::StateVariableTPTFilter<float> lowpass;
     juce::dsp::StateVariableTPTFilter<float> highpass;
+    juce::dsp::DryWetMixer<float> dryWet;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeedbackReverbAudioProcessor)

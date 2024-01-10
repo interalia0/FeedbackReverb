@@ -103,6 +103,9 @@ void FeedbackReverbAudioProcessor::prepareToPlay (double sampleRate, int samples
     lowpass.prepare(spec);
     highpass.prepare(spec);
     
+    dryWet.prepare(spec);
+    dryWet.setMixingRule(juce::dsp::DryWetMixingRule::linear);
+        
     highpass.setType(juce::dsp::StateVariableTPTFilterType::highpass);
     
     upmixedBuffer.setSize(revChannels, samplesPerBlock);
@@ -145,64 +148,102 @@ void FeedbackReverbAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     juce::ScopedNoDenormals noDenormals;
     
     const float mixValue = treeState.getRawParameterValue("mix")->load();
+    const float dampingValue = treeState.getRawParameterValue("damping")->load();
+    
     const float scaling = multiMix.scalingFactor2();
-
-    const float bufferNumSamples = buffer.getNumSamples();
-    const float bufferNumChannels = buffer.getNumChannels();
-        
-    if (bufferNumChannels >= 2)
-    {
-        for (int sample = 0; sample < bufferNumSamples; ++sample)
-        {
-            std::array<float, 2> inputStereo = {buffer.getSample(0, sample), buffer.getSample(1, sample)};
-            multiMix.stereoToMulti(inputStereo, upmixed);
-            
-            for (int channel = 0; channel < revChannels; ++channel)
-            {
-                upmixedBuffer.setSample(channel, sample, upmixed[channel]);
-            }
-        }
-    }
-    else if (bufferNumChannels == 1)
-    {
-        for (int sample = 0; sample < bufferNumSamples; ++sample)
-        {
-            std::array<float, 1> inputMono = {buffer.getSample(0, sample)};
-            multiMix.stereoToMulti(inputMono, upmixed);
-            
-            for (int channel = 0; channel < revChannels; ++channel)
-            {
-                upmixedBuffer.setSample(channel, sample, upmixed[channel]);
-            }
-        }
-    }
     
+    auto audioBlock = juce::dsp::AudioBlock<float> (buffer).getSubsetChannelBlock(0, buffer.getNumChannels());
+    auto context = juce::dsp::ProcessContextReplacing<float> (audioBlock);
+    const auto& input = context.getInputBlock();
+    const auto& output = context.getOutputBlock();
+    
+    dryWet.pushDrySamples(input);
+    dryWet.setWetMixProportion(mixValue);
+
+    for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            inputArray[channel] = buffer.getSample(channel, sample);
+        }
+
+        multiMix.stereoToMulti(inputArray, upMixed);
+
+        for (int channel = 0; channel < revChannels; ++channel) {
+            upmixedBuffer.setSample(channel, sample, upMixed[channel]);
+        }
+    }
     reverb.setRt60();
+    reverb.updateDamping(dampingValue);
     upmixedBuffer = reverb.processInPlace(upmixedBuffer);
-
     setFilters();
-    
-    for (int sample = 0; sample < bufferNumSamples; ++sample)
-    {
-        std::array<float, revChannels> processed;
-        std::array<float, 2> downmixed;
-        
-        for (int channel = 0; channel < revChannels; ++channel)
-        {
-            processed[channel] = upmixedBuffer.getSample(channel, sample);
+
+    for (int sample = 0; sample < upmixedBuffer.getNumSamples(); ++sample) {
+        for (int channel = 0; channel < upmixedBuffer.getNumChannels(); ++channel) {
+            processed[channel] = upmixedBuffer.getSample(channel, sample) * scaling;
         }
-        
-        multiMix.multiToStereo(processed, downmixed);
-                        
-        for (int channel = 0; channel < 2; ++channel)
-        {
-            const float input = buffer.getSample(channel, sample);
-            auto filteredSample = filterProcess(channel, downmixed[channel]);
-            
-            const float output = input * (1.0 - mixValue) + (filteredSample * mixValue * scaling);
-            buffer.setSample(channel, sample, output);
+        multiMix.multiToStereo(processed, outputArray);
+
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            output.setSample(channel, sample, outputArray[channel]);
         }
     }
+
+    dryWet.mixWetSamples(output);
+
+//    if (buffer.getNumChannels() >= 2)
+//    {
+//        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+//        {
+//            std::array<float, 2> inputStereo = {buffer.getSample(0, sample), buffer.getSample(1, sample)};
+//            multiMix.stereoToMulti(inputStereo, upMixed);
+//
+//            for (int channel = 0; channel < revChannels; ++channel)
+//            {
+//                upmixedBuffer.setSample(channel, sample, upMixed[channel]);
+//            }
+//        }
+//    }
+//    else if (buffer.getNumChannels() == 1)
+//    {
+//        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+//        {
+//            std::array<float, 1> inputMono = {buffer.getSample(0, sample)};
+//            multiMix.stereoToMulti(inputMono, upMixed);
+//
+//            for (int channel = 0; channel < revChannels; ++channel)
+//            {
+//                upmixedBuffer.setSample(channel, sample, upMixed[channel]);
+//            }
+//        }
+//    }
+//
+//    reverb.setRt60();
+//    upmixedBuffer = reverb.processInPlace(upmixedBuffer);
+//
+//    setFilters();
+//
+//    for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+//    {
+//        std::array<float, revChannels> processed;
+//        std::array<float, 2> downmixed;
+//
+//        for (int channel = 0; channel < revChannels; ++channel)
+//        {
+//            processed[channel] = upmixedBuffer.getSample(channel, sample);
+//        }
+//
+//        multiMix.multiToStereo(processed, downmixed);
+//
+//        for (int channel = 0; channel < 2; ++channel)
+//        {
+//            const float input = buffer.getSample(channel, sample);
+//            auto filteredSample = filterProcess(channel, downmixed[channel]);
+//
+//            const float output = input * (1.0 - mixValue) + (filteredSample * mixValue * scaling);
+//            buffer.setSample(channel, sample, output);
+//        }
+//    }
+    
+    
 }
 
 //==============================================================================
@@ -241,17 +282,13 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 
 void FeedbackReverbAudioProcessor::setFilters()
 {
-    const float lowpassCutoff = treeState.getRawParameterValue("highcut")->load();
-    lowpass.setCutoffFrequency(lowpassCutoff);
-    
     const float highpassCutoff = treeState.getRawParameterValue("lowcut")->load();
     highpass.setCutoffFrequency(highpassCutoff);
 }
 
 float FeedbackReverbAudioProcessor::filterProcess(int channel, float inputSample)
 {
-    auto filteredSample = lowpass.processSample(channel, inputSample);
-    filteredSample = highpass.processSample(channel, filteredSample);
+    auto filteredSample = highpass.processSample(channel, inputSample);
     
     return filteredSample;
 }
@@ -263,7 +300,7 @@ FeedbackReverbAudioProcessor::createParameterLayout()
     using pID = juce::ParameterID;
     using Range = juce::NormalisableRange<float>;
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"decay", 1}, "Decay", Range{0.1, 30, 0.1}, 2));
-    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"highcut", 1}, "Highcut", Range{20, 20000, 1, 1.4}, 8000));
+    layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"damping", 1}, "Damping", Range{2000, 15000, 1, 1.4}, 8000));
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"lowcut", 1}, "Lowcut", Range{20, 20000, 1, 0.15}, 100));
     layout.add(std::make_unique<juce::AudioParameterFloat> (pID{"mix", 1}, "Mix", Range{0, 1, 0.01}, 0.5));
     return layout;

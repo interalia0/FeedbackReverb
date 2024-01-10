@@ -59,6 +59,13 @@ struct Diffuser
             step.updateTime(size);
         }
     }
+    void updateDamping (float& dampingValue)
+    {
+        for (auto& step : steps)
+        {
+            step.dampingFilter.setCutoffFrequency(dampingValue);
+        }
+    }
 
     juce::AudioBuffer<float> processInPlace(juce::AudioBuffer<float>& buffer)
     {

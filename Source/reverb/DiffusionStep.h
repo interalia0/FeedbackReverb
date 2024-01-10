@@ -20,6 +20,8 @@ public:
     
     float delayMsRange = 80;
     float delaySamplesRange;
+    juce::dsp::StateVariableTPTFilter<float> dampingFilter;
+
     
     void prepare(juce::dsp::ProcessSpec& spec)
     {
@@ -108,7 +110,6 @@ private:
     std::array<bool, channels> flipPolarity;
     HadamardMixer<float, channels> hadamard;
     
-    juce::dsp::StateVariableTPTFilter<float> dampingFilter;
     std::array<juce::dsp::FirstOrderTPTFilter<float>, channels> smoothingFilters;
 };
     
